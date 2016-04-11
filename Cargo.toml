@@ -1,0 +1,21 @@
+[package]
+
+name          = "quandl-v3"
+version       = "0.1.0"
+authors       = ["Damien Levac <damien.levac@gmail.com>"]
+description   = "Rust bindings for the Quandl v3 API."
+documentation = "http://proksima.github.io/quandl-doc/quandl/index.html"
+homepage      = "https://github.com/Proksima/quandl"
+repository    = "https://github.com/Proksima/quandl"
+readme        = "README.md"
+keywords      = ["database", "api", "finance", "data", "mining", "serialize", "quandl", "quandl-v3"]
+license       = "MPL-2.0"
+
+[dependencies]
+
+has = "0.1"
+zip = "0.1"
+csv = "0.14"
+hyper = "0.8"
+rustc-serialize = "0.3"
+
