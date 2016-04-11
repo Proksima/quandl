@@ -5,7 +5,7 @@ Quandl's RESTful API.
 
 [![](http://meritbadge.herokuapp.com/quandl-v3)](https://crates.io/crates/quandl-v3)
 [![License: MPL 2.0](https://img.shields.io/badge/License-MPL%202.0-brightgreen.svg)](https://opensource.org/licenses/MPL-2.0)
-[![Travis Build Status](https://travis-ci.org/Proksima/quandl-v3.svg?branch=master)](https://travis-ci.org/Proksima/quandl-v3)
+[![Travis Build Status](https://travis-ci.org/Proksima/quandl.svg?branch=master)](https://travis-ci.org/Proksima/quandl)
 
 This crate uses the `rustc_serialize` crate extensively and thus suffers from some of its
 limitation. Namely,
