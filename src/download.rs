@@ -22,7 +22,7 @@ pub fn download<S: AsRef<str>>(url: S) -> Result<Vec<u8>> {
                     Ok(encoded_error) => {
                         match json::decode(&encoded_error[..]) {
                             Ok(api_error) => Err(Error::ApiCallFailed(api_error)),
-                            Err(e)        => Err(Error::ParsingFailed(e.to_string())),
+                            Err(e) => Err(Error::ParsingFailed(e.to_string())),
                         }
                     },
 

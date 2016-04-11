@@ -43,13 +43,13 @@ pub trait ApiCall<T: Decodable + Clone> {
 
             match String::from_utf8(data) {
                 Ok(data) => data,
-                Err(e)   => return Err(Error::ParsingFailed(e.to_string())),
+                Err(e) => return Err(Error::ParsingFailed(e.to_string())),
             }
         };
 
         match json::decode(&json_data[..]) {
             Ok(data) => Ok(data),
-            Err(e)   => Err(Error::ParsingFailed(e.to_string())),
+            Err(e) => Err(Error::ParsingFailed(e.to_string())),
         }
     }
 
