@@ -61,7 +61,7 @@ fn main() {
          query
     };
 
-    let response: Result<Data<(String, f64)>> = query.send().unwrap();
+    let response: Data<(String, f64)> = query.send().unwrap();
 
     // Print the date and closing price for Apple's stock for the month of February 2016.
     for data in &response.data {
