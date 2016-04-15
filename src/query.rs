@@ -1,5 +1,6 @@
 use std::collections::BTreeMap;
 use rustc_serialize::{Decodable, json};
+use csv;
 
 use types::*;
 use parameters::*;
@@ -168,7 +169,27 @@ impl DataAndMetadataQuery {
 
 impl ApiCall<DatabaseMetadata> for DatabaseMetadataQuery {
     fn send(&self) -> Result<DatabaseMetadata> {
-        send_and_unwrap_json(self)
+        let json_data = {
+            let data = try!(ApiCall::<DatabaseMetadata>::encoded_data(self));
+
+            match String::from_utf8(data) {
+                Ok(data) => data,
+                Err(e) => return Err(Error::ParsingFailed(e.to_string())),
+            }
+        };
+
+        match json::decode::<BTreeMap<String, DatabaseMetadata>>(&json_data[..]) {
+            Ok(tree) => {
+                if tree.len() == 1 {
+                    Ok(tree.iter().next().unwrap().1.clone())
+                } else {
+                    Err(Error::ParsingFailed(format!("Expected a single element, got {}.",
+                                                     tree.len())))
+                }
+            },
+
+            Err(e) => Err(Error::ParsingFailed(e.to_string())),
+        }
     }
 
     fn fmt_prefix(&self) -> Option<String> {
@@ -182,7 +203,27 @@ impl ApiCall<DatabaseMetadata> for DatabaseMetadataQuery {
 
 impl ApiCall<DatasetMetadata> for DatasetMetadataQuery {
     fn send(&self) -> Result<DatasetMetadata> {
-        send_and_unwrap_json(self)
+        let json_data = {
+            let data = try!(ApiCall::<DatasetMetadata>::encoded_data(self));
+
+            match String::from_utf8(data) {
+                Ok(data) => data,
+                Err(e) => return Err(Error::ParsingFailed(e.to_string())),
+            }
+        };
+
+        match json::decode::<BTreeMap<String, DatasetMetadata>>(&json_data[..]) {
+            Ok(tree) => {
+                if tree.len() == 1 {
+                    Ok(tree.iter().next().unwrap().1.clone())
+                } else {
+                    Err(Error::ParsingFailed(format!("Expected a single element, got {}.",
+                                                     tree.len())))
+                }
+            },
+
+            Err(e) => Err(Error::ParsingFailed(e.to_string())),
+        }
     }
 
     fn fmt_prefix(&self) -> Option<String> {
@@ -308,38 +349,30 @@ impl ApiCall<Vec<Code>> for CodeListQuery {
     }
 }
 
-impl<T: Decodable + Clone> ApiCall<Data<T>> for DataQuery {
-    fn send(&self) -> Result<Data<T>> {
-        send_and_unwrap_json(self)
-    }
+impl<T: Decodable + Clone> ApiCall<Vec<T>> for DataQuery {
+    fn send(&self) -> Result<Vec<T>> {
+        let csv_data = {
+            let data = try!(ApiCall::<Vec<T>>::encoded_data(self));
 
-    fn fmt_prefix(&self) -> Option<String> {
-        Some(format!("/datasets/{}/{}/data.json", self.database_code, self.dataset_code))
-    }
+            match String::from_utf8(data) {
+                Ok(data) => data,
+                Err(e) => return Err(Error::ParsingFailed(e.to_string())),
+            }
+        };
 
-    fn fmt_arguments(&self) -> Option<String> {
-        let arg_1 = ApiParameters::fmt(self);
-        let arg_2 = DataParameters::fmt(self);
+        let data = {
+            let mut reader = csv::Reader::from_string(csv_data).has_headers(false);
+            reader.decode().collect::<csv::Result<Vec<T>>>()
+        };
 
-        if arg_1.is_some() && arg_2.is_some() {
-            Some(format!("{}&{}", arg_1.unwrap(), arg_2.unwrap()))
-        } else if arg_1.is_some() {
-            arg_1
-        } else if arg_2.is_some() {
-            arg_2
-        } else {
-            None
+        match data {
+            Ok(data) => Ok(data),
+            Err(e) => Err(Error::ParsingFailed(e.to_string())),
         }
     }
-}
-
-impl<T: Decodable + Clone> ApiCall<DataAndMetadata<T>> for DataAndMetadataQuery {
-    fn send(&self) -> Result<DataAndMetadata<T>> {
-        send_and_unwrap_json(self)
-    }
 
     fn fmt_prefix(&self) -> Option<String> {
-        Some(format!("/datasets/{}/{}.json", self.database_code, self.dataset_code))
+        Some(format!("/datasets/{}/{}/data.csv", self.database_code, self.dataset_code))
     }
 
     fn fmt_arguments(&self) -> Option<String> {
@@ -347,13 +380,13 @@ impl<T: Decodable + Clone> ApiCall<DataAndMetadata<T>> for DataAndMetadataQuery 
         let arg_2 = DataParameters::fmt(self);
 
         if arg_1.is_some() && arg_2.is_some() {
-            Some(format!("{}&{}", arg_1.unwrap(), arg_2.unwrap()))
+            Some(format!("exclude_column_names=true&{}&{}", arg_1.unwrap(), arg_2.unwrap()))
         } else if arg_1.is_some() {
-            arg_1
+            Some(format!("exclude_column_names=true&{}", arg_1.unwrap()))
         } else if arg_2.is_some() {
-            arg_2
+            Some(format!("exclude_column_names=true&{}", arg_2.unwrap()))
         } else {
-            None
+            Some(String::from("exclude_column_names=true"))
         }
     }
 }
@@ -364,11 +397,9 @@ impl ApiParameters for DatabaseMetadataQuery {}
 impl ApiParameters for DatasetMetadataQuery {}
 impl ApiParameters for CodeListQuery {}
 impl ApiParameters for DataQuery {}
-impl ApiParameters for DataAndMetadataQuery {}
 impl SearchParameters for DatabaseSearch {}
 impl SearchParameters for DatasetSearch {}
 impl DataParameters for DataQuery {}
-impl DataParameters for DataAndMetadataQuery {}
 
 impl_has!(DatabaseSearch, ApiArguments, request_arguments);
 impl_has!(DatabaseSearch, SearchArguments, search_arguments);
@@ -379,29 +410,3 @@ impl_has!(DatasetMetadataQuery, ApiArguments, request_arguments);
 impl_has!(CodeListQuery, ApiArguments, request_arguments);
 impl_has!(DataQuery, DataArguments, data_arguments);
 impl_has!(DataQuery, ApiArguments, request_arguments);
-impl_has!(DataAndMetadataQuery, DataArguments, data_arguments);
-impl_has!(DataAndMetadataQuery, ApiArguments, request_arguments);
-
-fn send_and_unwrap_json<T: Decodable + Clone, A: ApiCall<T>>(api_call: &A) -> Result<T> {
-    let json_data = {
-        let data = try!(ApiCall::<T>::encoded_data(api_call));
-
-        match String::from_utf8(data) {
-            Ok(data) => data,
-            Err(e)   => return Err(Error::ParsingFailed(e.to_string())),
-        }
-    };
-
-    match json::decode::<BTreeMap<String, T>>(&json_data[..]) {
-        Ok(tree) => {
-            if tree.len() == 1 {
-                Ok(tree.iter().next().unwrap().1.clone())
-            } else {
-                Err(Error::ParsingFailed(format!("Expected a single element, got {}.",
-                                                 tree.len())))
-            }
-        },
-
-        Err(e)   => Err(Error::ParsingFailed(e.to_string())),
-    }
-}

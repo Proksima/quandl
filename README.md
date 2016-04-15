@@ -3,9 +3,10 @@
 The goal of this crate is to offer a well documented, complete and easy to use interface to
 Quandl's RESTful API.
 
-[![](http://meritbadge.herokuapp.com/quandl-v3)](https://crates.io/crates/quandl-v3)
+[![Crates.io](http://meritbadge.herokuapp.com/quandl-v3)](https://crates.io/crates/quandl-v3)
 [![License: MPL 2.0](https://img.shields.io/badge/License-MPL%202.0-brightgreen.svg)](https://opensource.org/licenses/MPL-2.0)
 [![Travis Build Status](https://travis-ci.org/Proksima/quandl.svg?branch=master)](https://travis-ci.org/Proksima/quandl)
+[![Documentation](https://img.shields.io/badge/docs-latest-C9893D.svg)](http://proksima.github.io/quandl-v3-doc/quandl-v3/index.html)
 
 This crate uses the `rustc_serialize` crate extensively and thus suffers from some of its
 limitation. Namely,
@@ -18,10 +19,6 @@ limitation. Namely,
   API. The deserializer need the names to match to work properly, thus you will see
   `Order::asc` instead of the more readable `Order::Ascending`.
 
-* The `Data` and `DataAndMetadata` structs are messy because it needs to match the
-  serialization returned by Quandl. If it wasn't of this limitation the `DatasetMetadata`
-  struct would be reused and the fields would be better organized.
-
 Some other design choices of this crate includes
 
 * No runtime checking of the query created. This crate makes it as hard as statically possible
@@ -33,13 +30,10 @@ Some other design choices of this crate includes
   same time. The function returns an iterator which gives the benefit of multithreading
   downloads and asynchronicity which are indispensable when doing data mining.
 
-The only other missing feature is the ability to query an entire premium database in a single
-API call. Unfortunately I do not have access to any premium database and thus wouldn't have
-been able to test the resulting code.
-
-### Documentation
-
-http://proksima.github.io/quandl-v3-doc/quandl-v3/index.html
+* We use the JSON Quandl API for everything but data queries as it often returns more
+  information. When it comes to the data queries we use the CSV subset of the API as it is
+  faster and allows to use the `rust-csv` crates which allow you to define your own structs to
+  receive the data.
 
 ### Simple example
 
@@ -61,14 +55,13 @@ fn main() {
          query
     };
 
-    let response: Data<(String, f64)> = query.send().unwrap();
+    let response: Vec<(String, f64)> = query.send().unwrap();
 
     // Print the date and closing price for Apple's stock for the month of February 2016.
-    for data in &response.data {
+    for data in &response {
         println!("{} - {}", data.0, data.1);
     }
 }
-
 ```
 
 This crate is written in the hope it will be useful. I am in no way affiliated to Quandl and

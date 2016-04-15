@@ -25,5 +25,3 @@ pub use super::types::SearchMetadata;
 pub use super::types::DatabaseList;
 pub use super::types::DatasetList;
 pub use super::types::Code;
-pub use super::types::Data;
-pub use super::types::DataAndMetadata;

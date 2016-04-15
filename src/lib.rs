@@ -14,10 +14,6 @@
 //!   API. The deserializer need the names to match to work properly, thus you will see
 //!   `Order::asc` instead of the more readable `Order::Ascending`.
 //!
-//! * The `Data` and `DataAndMetadata` structs are messy because it needs to match the
-//!   serialization returned by Quandl. If it wasn't of this limitation the `DatasetMetadata`
-//!   struct would be reused and the fields would be better organized.
-//!
 //! Some other design choices of this crate includes
 //!
 //! * No runtime checking of the query created. This crate makes it as hard as statically possible
@@ -29,9 +25,10 @@
 //!   same time. The function returns an iterator which gives the benefit of multithreading
 //!   downloads and asynchronicity which are indispensable when doing data mining.
 //!
-//! The only other missing feature is the ability to query an entire premium database in a single
-//! API call. Unfortunately I do not have access to any premium database and thus wouldn't have
-//! been able to test the resulting code.
+//! * We use the JSON Quandl API for everything but data queries as it often returns more
+//!   information. When it comes to the data queries we use the CSV subset of the API as it is
+//!   faster and allows to use the `rust-csv` crates which allow you to define your own structs to
+//!   receive the data.
 //!
 //! ### Simple example
 //!
@@ -53,14 +50,13 @@
 //!          query
 //!     };
 //!
-//!     let response: Data<(String, f64)> = query.send().unwrap();
+//!     let response: Vec<(String, f64)> = query.send().unwrap();
 //!
 //!     // Print the date and closing price for Apple's stock for the month of February 2016.
-//!     for data in &response.data {
+//!     for data in &response {
 //!         println!("{} - {}", data.0, data.1);
 //!     }
 //! }
-//!
 //! ```
 //!
 //! This crate is written in the hope it will be useful. I am in no way affiliated to Quandl and

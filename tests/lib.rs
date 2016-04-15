@@ -136,38 +136,12 @@ fn data_query() {
         query
     };
 
-    let data: Result<Data<(String, f64)>> = query.send();
+    let data: Result<Vec<(String, f64)>> = query.send();
 
-    println!("{}", ApiCall::<Data<(String, f64)>>::url(&query));
+    println!("{}", ApiCall::<Vec<(String, f64)>>::url(&query));
     println!("{:?}", data);
 
     assert!(data.is_ok());
-}
-
-#[test]
-fn data_and_metadata_query() {
-    let query = {
-        let mut query = DataAndMetadataQuery::new("WIKI", "AAPL");
-
-        query.rows(20)
-             .transform(Transform::none)
-             .end_date(2016, 2, 10)
-             .start_date(2016, 2, 1)
-             .column_index(5);
-
-        if let Some(key) = API_KEY {
-            query.api_key(key);
-        }
-
-        query
-    };
-
-    let data_and_metadata: Result<DataAndMetadata<(String, f64)>> = query.send();
-
-    println!("{}", ApiCall::<DataAndMetadata<(String, f64)>>::url(&query));
-    println!("{:?}", data_and_metadata);
-
-    assert!(data_and_metadata.is_ok());
 }
 
 #[test]

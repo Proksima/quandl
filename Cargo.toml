@@ -1,7 +1,7 @@
 [package]
 
 name          = "quandl-v3"
-version       = "0.1.1"
+version       = "1.0.0"
 authors       = ["Damien Levac <damien.levac@gmail.com>"]
 description   = "Rust bindings for the Quandl v3 API."
 documentation = "http://proksima.github.io/quandl-v3-doc/quandl-v3/index.html"
