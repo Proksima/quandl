@@ -1,8 +1,6 @@
 /// Parameters to indicate the desired frequency. When you change the frequency of a dataset,
 /// Quandl returns the last observation for the given period.
 ///
-/// [Quandl API Reference](https://www.quandl.com/docs/api#data)
-///
 #[allow(non_camel_case_types)]
 #[derive(Debug, Copy, Clone, PartialEq, RustcEncodable, RustcDecodable)]
 pub enum Frequency {
@@ -33,8 +31,6 @@ pub enum Frequency {
 
 /// Select the sort order with this enum. The default sort order is descending.
 ///
-/// [Quandl API Reference](https://www.quandl.com/docs/api#data)
-///
 #[allow(non_camel_case_types)]
 #[derive(Debug, Copy, Clone, PartialEq, RustcEncodable, RustcDecodable)]
 pub enum Order {
@@ -48,8 +44,6 @@ pub enum Order {
 }
 
 /// Perform calculations on your data prior to downloading.
-///
-/// [Quandl API Reference](https://www.quandl.com/docs/api#data)
 ///
 #[allow(non_camel_case_types)]
 #[derive(Debug, Copy, Clone, PartialEq, RustcEncodable, RustcDecodable)]
@@ -88,8 +82,6 @@ pub enum Transform {
 
 /// Hold the metadata associated to a specific database.
 ///
-/// [Quandl API Reference](https://www.quandl.com/docs/api#database-metadata)
-///
 #[derive(Debug, Clone, PartialEq, RustcEncodable, RustcDecodable)]
 pub struct DatabaseMetadata {
     /// Quandl's numerical identifier for this database.
@@ -127,8 +119,6 @@ pub struct DatabaseMetadata {
 
 /// Hold the metadata associated to a specific dataset.
 ///
-/// [Quandl API Reference](https://www.quandl.com/docs/api#metadata)
-///
 #[derive(Debug, Clone, PartialEq, RustcEncodable, RustcDecodable)]
 pub struct DatasetMetadata {
     /// Quandl's numerical identifier for this dataset.
@@ -137,13 +127,9 @@ pub struct DatasetMetadata {
 
     /// The dataset code for the returned dataset.
     ///
-    /// [Quandl API Reference](https://www.quandl.com/docs/api#quandl-codes)
-    ///
     pub dataset_code: String,
 
     /// The code for the database this dataset belongs to.
-    ///
-    /// [Quandl API Reference](https://www.quandl.com/docs/api#quandl-codes)
     ///
     pub database_code: String,
 
@@ -187,8 +173,6 @@ pub struct DatasetMetadata {
 /// Some queries, namely those which list datasets or databases metadata, often return some
 /// metadata about the search itself. This is a structure to hold that metadata.
 ///
-/// [Quandl API Reference](https://www.quandl.com/docs/api#dataset-search)
-///
 #[derive(Debug, Clone, PartialEq, RustcEncodable, RustcDecodable)]
 pub struct SearchMetadata {
     /// A string of the search keywords submitted formatted as `format!("{}+{}+...+{}", keyword_1,
@@ -231,8 +215,6 @@ pub struct SearchMetadata {
 
 /// Data structure to hold the result of doing a search database query.
 ///
-/// [Quandl API Reference](https://www.quandl.com/docs/api#database-list)
-///
 #[derive(Debug, Clone, PartialEq, RustcEncodable, RustcDecodable)]
 pub struct DatabaseList {
     /// A vector containing the first page of databases' metadata.
@@ -246,8 +228,6 @@ pub struct DatabaseList {
 
 /// Data structure to hold the result of a search dataset query.
 ///
-/// [Quandl API Reference](https://www.quandl.com/docs/api#dataset-search)
-///
 #[derive(Debug, Clone, PartialEq, RustcEncodable, RustcDecodable)]
 pub struct DatasetList {
     /// A vector containing the first page of datasets' metadata.
@@ -260,8 +240,6 @@ pub struct DatasetList {
 }
 
 /// Data structure to hold the result of a code list query.
-///
-/// [Quandl API Reference](https://www.quandl.com/docs/api#dataset-list)
 ///
 /// It should be noted that I slightly changed the meaning of a "dataset list" in this crate for
 /// consistency with the `DatabaseList`. In this crate `DatasetList` and `DatabaseList` correspond

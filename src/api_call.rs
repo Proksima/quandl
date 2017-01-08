@@ -1,6 +1,9 @@
 use rustc_serialize::{Decodable, json};
 
+use has::Has;
+
 use {Result, Error};
+use parameters::ApiArguments;
 
 /// Quandl API URL used as the base URL for all queries.
 ///
@@ -10,7 +13,7 @@ pub static QUANDL_API_URL: &'static str = "https://www.quandl.com/api/v3";
 ///
 /// This trait is implemented by all queries.
 ///
-pub trait ApiCall<T: Decodable + Clone> {
+pub trait ApiCall<T: Decodable + Clone>: Has<ApiArguments> {
     /// Returns the URL that will be used to submit the query through Quandl's API.
     ///
     fn url(&self) -> String {

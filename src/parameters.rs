@@ -4,7 +4,7 @@ use types::{Order, Frequency, Transform};
 
 #[derive(Debug, Clone, PartialEq, Default)]
 pub struct ApiArguments {
-    api_key: Option<String>,
+    pub api_key: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Default)]
@@ -28,8 +28,6 @@ pub struct DataArguments {
 
 /// Api parameters implemented by all queries.
 ///
-/// [Quandl API Reference](https://www.quandl.com/docs/api#api-keys)
-///
 pub trait ApiParameters: HasMut<ApiArguments> {
     /// Include your personal Quandl API key with your query.
     ///
@@ -51,8 +49,6 @@ pub trait ApiParameters: HasMut<ApiArguments> {
 }
 
 /// Search parameters implemented by search queries.
-///
-/// [Quandl API Reference](https://www.quandl.com/docs/api#database-search)
 ///
 pub trait SearchParameters: HasMut<SearchArguments> {
     /// Specify a vector/list of search keywords to retrieve only database/dataset related to those
@@ -117,8 +113,6 @@ pub trait SearchParameters: HasMut<SearchArguments> {
 }
 
 /// Data parameters implemented by data fetching queries.
-///
-/// [Quandl API Reference](https://www.quandl.com/docs/api#data)
 ///
 pub trait DataParameters: HasMut<DataArguments> {
     /// Specify the number of rows of data to be returned by this query.

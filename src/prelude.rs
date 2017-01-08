@@ -3,6 +3,9 @@ pub use super::api_call::QUANDL_API_URL;
 
 pub use super::batch_query::Iterator as BatchQueryIterator;
 pub use super::batch_query::batch_query;
+pub use super::batch_query::batch_query_premium;
+pub use super::batch_query::batch_query_with_offset;
+pub use super::batch_query::batch_query_premium_with_offset;
 
 pub use super::parameters::ApiParameters;
 pub use super::parameters::DataParameters;

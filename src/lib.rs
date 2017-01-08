@@ -75,6 +75,7 @@ extern crate csv;
 extern crate hyper;
 extern crate rustc_serialize;
 #[macro_use] extern crate has;
+#[macro_use] extern crate lazy_static;
 
 mod types;
 mod query;
@@ -98,8 +99,6 @@ pub type Result<T> = ::std::result::Result<T, Error>;
 
 /// Struct for storing a Quandl API error response as-is.
 ///
-/// [Quandl API Reference](https://www.quandl.com/docs/api#quandl-errors)
-///
 #[derive(Debug, Clone, PartialEq, RustcEncodable, RustcDecodable)]
 pub struct ApiErrorResponse {
     /// This field contains more specific information about what went wrong. For example, it could
@@ -113,8 +112,6 @@ pub struct ApiErrorResponse {
 }
 
 /// Struct holding Quandl's error code and corresponding message.
-///
-/// [Quandl API Reference](https://www.quandl.com/docs/api#quandl-errors)
 ///
 #[derive(Debug, Clone, PartialEq, RustcEncodable, RustcDecodable)]
 pub struct QuandlError {

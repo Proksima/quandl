@@ -4,9 +4,7 @@ extern crate rustc_serialize;
 use quandl_v3::Result;
 use quandl_v3::prelude::*;
 
-// Api key registered to 'quandl.tester@gmail.com'
-//
-static API_KEY: Option<&'static str> = Some("x3E2BsxsYR1V9iNuAw6m");
+static API_KEY: Option<&'static str> = Some("x3E2BsxsYR1V9iNuAw6m"); // quandl.tester@gmail.com
 
 #[test]
 fn database_metadata_query() {

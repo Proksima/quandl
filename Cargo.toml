@@ -14,8 +14,9 @@ license       = "MPL-2.0"
 [dependencies]
 
 has = "0.1"
-zip = "0.1"
-csv = "0.14"
-hyper = "0.8"
+zip = "0.2"
+csv = "0.15"
+hyper = "0.9"
+lazy_static = "0.2"
 rustc-serialize = "0.3"
 

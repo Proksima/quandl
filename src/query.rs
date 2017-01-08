@@ -10,8 +10,6 @@ use {Result, Error};
 
 /// Database metadata query.
 ///
-/// [Quandl API Reference](https://www.quandl.com/docs/api#database-metadata)
-///
 #[derive(Debug, Clone, PartialEq)]
 pub struct DatabaseMetadataQuery {
     database_code: String,
@@ -19,8 +17,6 @@ pub struct DatabaseMetadataQuery {
 }
 
 /// Dataset metadata query.
-///
-/// [Quandl API Reference](https://www.quandl.com/docs/api#dataset-metadata)
 ///
 #[derive(Debug, Clone, PartialEq)]
 pub struct DatasetMetadataQuery {
@@ -31,8 +27,6 @@ pub struct DatasetMetadataQuery {
 
 /// Query to search into a database metadata list.
 ///
-/// [Quandl API Reference](https://www.quandl.com/docs/api#database-list)
-///
 #[derive(Debug, Clone, PartialEq)]
 pub struct DatabaseSearch {
     request_arguments: ApiArguments,
@@ -40,8 +34,6 @@ pub struct DatabaseSearch {
 }
 
 /// Query to search into a dataset metadata list.
-///
-/// [Quandl API Reference](https://www.quandl.com/docs/api#dataset-search)
 ///
 #[derive(Debug, Clone, PartialEq)]
 pub struct DatasetSearch {
@@ -52,8 +44,6 @@ pub struct DatasetSearch {
 
 /// Query a list of dataset codes from a specific database.
 ///
-/// [Quandl API Reference](https://www.quandl.com/docs/api#dataset-list)
-///
 #[derive(Debug, Clone, PartialEq)]
 pub struct CodeListQuery {
     database_code: String,
@@ -61,8 +51,6 @@ pub struct CodeListQuery {
 }
 
 /// Query the data from a specific dataset.
-///
-/// [Quandl API Reference](https://www.quandl.com/docs/api#data)
 ///
 #[derive(Debug, Clone, PartialEq)]
 pub struct DataQuery {
@@ -73,8 +61,6 @@ pub struct DataQuery {
 }
 
 /// Query the data and metadata from a specific dataset.
-///
-/// [Quandl API Reference](https://www.quandl.com/docs/api#data-and-metadata)
 ///
 #[derive(Debug, Clone, PartialEq)]
 pub struct DataAndMetadataQuery {
