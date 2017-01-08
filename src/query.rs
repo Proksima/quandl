@@ -12,7 +12,7 @@ use {Result, Error};
 ///
 #[derive(Debug, Clone, PartialEq)]
 pub struct DatabaseMetadataQuery {
-    database_code: String,
+    pub database_code: String,
     request_arguments: ApiArguments,
 }
 
@@ -20,8 +20,8 @@ pub struct DatabaseMetadataQuery {
 ///
 #[derive(Debug, Clone, PartialEq)]
 pub struct DatasetMetadataQuery {
-    database_code: String,
-    dataset_code: String,
+    pub database_code: String,
+    pub dataset_code: String,
     request_arguments: ApiArguments,
 }
 
@@ -37,7 +37,7 @@ pub struct DatabaseSearch {
 ///
 #[derive(Debug, Clone, PartialEq)]
 pub struct DatasetSearch {
-    database_code: String,
+    pub database_code: String,
     request_arguments: ApiArguments,
     search_arguments: SearchArguments,
 }
@@ -46,7 +46,7 @@ pub struct DatasetSearch {
 ///
 #[derive(Debug, Clone, PartialEq)]
 pub struct CodeListQuery {
-    database_code: String,
+    pub database_code: String,
     request_arguments: ApiArguments,
 }
 
@@ -54,8 +54,8 @@ pub struct CodeListQuery {
 ///
 #[derive(Debug, Clone, PartialEq)]
 pub struct DataQuery {
-    database_code: String,
-    dataset_code: String,
+    pub database_code: String,
+    pub dataset_code: String,
     data_arguments: DataArguments,
     request_arguments: ApiArguments,
 }
@@ -64,8 +64,8 @@ pub struct DataQuery {
 ///
 #[derive(Debug, Clone, PartialEq)]
 pub struct DataAndMetadataQuery {
-    database_code: String,
-    dataset_code: String,
+    pub database_code: String,
+    pub dataset_code: String,
     data_arguments: DataArguments,
     request_arguments: ApiArguments,
 }
