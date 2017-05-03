@@ -18,5 +18,8 @@ zip = "0.2"
 csv = "0.15"
 hyper = "0.9"
 lazy_static = "0.2"
-rustc-serialize = "0.3"
+
+serde = "0.9"
+serde_json = "0.9"
+serde_derive = "0.9"
 

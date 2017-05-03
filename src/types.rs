@@ -2,7 +2,7 @@
 /// Quandl returns the last observation for the given period.
 ///
 #[allow(non_camel_case_types)]
-#[derive(Debug, Copy, Clone, PartialEq, RustcEncodable, RustcDecodable)]
+#[derive(Debug, Copy, Clone, PartialEq, Serialize, Deserialize)]
 pub enum Frequency {
     /// Unspecified frequency. In a data query, will default to the frequency of the dataset.
     ///
@@ -32,7 +32,7 @@ pub enum Frequency {
 /// Select the sort order with this enum. The default sort order is descending.
 ///
 #[allow(non_camel_case_types)]
-#[derive(Debug, Copy, Clone, PartialEq, RustcEncodable, RustcDecodable)]
+#[derive(Debug, Copy, Clone, PartialEq, Serialize, Deserialize)]
 pub enum Order {
     /// Ascending ordering, for time series this means the first entry is the earliest date.
     ///
@@ -46,7 +46,7 @@ pub enum Order {
 /// Perform calculations on your data prior to downloading.
 ///
 #[allow(non_camel_case_types)]
-#[derive(Debug, Copy, Clone, PartialEq, RustcEncodable, RustcDecodable)]
+#[derive(Debug, Copy, Clone, PartialEq, Serialize, Deserialize)]
 pub enum Transform {
     /// No transformation, also the default.
     ///
@@ -82,7 +82,7 @@ pub enum Transform {
 
 /// Hold the metadata associated to a specific database.
 ///
-#[derive(Debug, Clone, PartialEq, RustcEncodable, RustcDecodable)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct DatabaseMetadata {
     /// Quandl's numerical identifier for this database.
     ///
@@ -119,7 +119,7 @@ pub struct DatabaseMetadata {
 
 /// Hold the metadata associated to a specific dataset.
 ///
-#[derive(Debug, Clone, PartialEq, RustcEncodable, RustcDecodable)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct DatasetMetadata {
     /// Quandl's numerical identifier for this dataset.
     ///
@@ -173,7 +173,7 @@ pub struct DatasetMetadata {
 /// Some queries, namely those which list datasets or databases metadata, often return some
 /// metadata about the search itself. This is a structure to hold that metadata.
 ///
-#[derive(Debug, Clone, PartialEq, RustcEncodable, RustcDecodable)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct SearchMetadata {
     /// A string of the search keywords submitted formatted as `format!("{}+{}+...+{}", keyword_1,
     /// keyword_2, ..., keyword_n)`.
@@ -215,7 +215,7 @@ pub struct SearchMetadata {
 
 /// Data structure to hold the result of doing a search database query.
 ///
-#[derive(Debug, Clone, PartialEq, RustcEncodable, RustcDecodable)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct DatabaseList {
     /// A vector containing the first page of databases' metadata.
     ///
@@ -228,7 +228,7 @@ pub struct DatabaseList {
 
 /// Data structure to hold the result of a search dataset query.
 ///
-#[derive(Debug, Clone, PartialEq, RustcEncodable, RustcDecodable)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct DatasetList {
     /// A vector containing the first page of datasets' metadata.
     ///
@@ -246,7 +246,7 @@ pub struct DatasetList {
 /// to Quandl's "dataset search" and "database list" respectively while `Vec<Code>` is Quandl's
 /// equivalent of a "dataset list".
 ///
-#[derive(Debug, Clone, PartialEq, RustcEncodable, RustcDecodable)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Code {
     /// The dataset code for the returned dataset.
     ///

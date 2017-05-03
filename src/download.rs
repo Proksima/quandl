@@ -2,7 +2,8 @@ use std::io::Read;
 
 use hyper::Client;
 use hyper::header::Connection;
-use rustc_serialize::json;
+
+use serde_json;
 
 use {Result, Error};
 
@@ -20,7 +21,7 @@ pub fn download<S: AsRef<str>>(url: S) -> Result<Vec<u8>> {
             } else {
                 match String::from_utf8(body) {
                     Ok(encoded_error) => {
-                        match json::decode(&encoded_error[..]) {
+                        match serde_json::from_str(&encoded_error[..]) {
                             Ok(api_error) => Err(Error::ApiCallFailed(api_error)),
                             Err(e) => Err(Error::ParsingFailed(e.to_string())),
                         }

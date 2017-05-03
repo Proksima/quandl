@@ -1,6 +1,6 @@
-use rustc_serialize::{Decodable, json};
-
 use has::Has;
+use serde::Deserialize;
+use serde_json;
 
 use {Result, Error};
 use parameters::ApiArguments;
@@ -13,7 +13,7 @@ pub static QUANDL_API_URL: &'static str = "https://www.quandl.com/api/v3";
 ///
 /// This trait is implemented by all queries.
 ///
-pub trait ApiCall<T: Decodable + Clone>: Has<ApiArguments> {
+pub trait ApiCall<T: Deserialize + Clone>: Has<ApiArguments> {
     /// Returns the URL that will be used to submit the query through Quandl's API.
     ///
     fn url(&self) -> String {
@@ -50,7 +50,7 @@ pub trait ApiCall<T: Decodable + Clone>: Has<ApiArguments> {
             }
         };
 
-        match json::decode(&json_data[..]) {
+        match serde_json::from_str(&json_data[..]) {
             Ok(data) => Ok(data),
             Err(e) => Err(Error::ParsingFailed(e.to_string())),
         }
@@ -71,7 +71,7 @@ pub trait ApiCall<T: Decodable + Clone>: Has<ApiArguments> {
     }
 }
 
-impl<'a, T: Decodable + Clone, A: ApiCall<T>> ApiCall<T> for &'a A {
+impl<'a, T: Deserialize + Clone, A: ApiCall<T>> ApiCall<T> for &'a A {
     fn url(&self) -> String {
         ApiCall::<T>::url(*self)
     }
@@ -93,7 +93,7 @@ impl<'a, T: Decodable + Clone, A: ApiCall<T>> ApiCall<T> for &'a A {
     }
 }
 
-impl<'a, T: Decodable + Clone, A: ApiCall<T>> ApiCall<T> for &'a mut A {
+impl<'a, T: Deserialize + Clone, A: ApiCall<T>> ApiCall<T> for &'a mut A {
     fn url(&self) -> String {
         ApiCall::<T>::url(*self)
     }

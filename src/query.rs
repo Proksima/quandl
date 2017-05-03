@@ -1,6 +1,8 @@
 use std::collections::BTreeMap;
-use rustc_serialize::{Decodable, json};
+
 use csv;
+use serde::Deserialize;
+use serde_json;
 
 use types::*;
 use parameters::*;
@@ -164,7 +166,7 @@ impl ApiCall<DatabaseMetadata> for DatabaseMetadataQuery {
             }
         };
 
-        match json::decode::<BTreeMap<String, DatabaseMetadata>>(&json_data[..]) {
+        match serde_json::from_str::<BTreeMap<String, DatabaseMetadata>>(&json_data[..]) {
             Ok(tree) => {
                 if tree.len() == 1 {
                     Ok(tree.iter().next().unwrap().1.clone())
@@ -198,7 +200,7 @@ impl ApiCall<DatasetMetadata> for DatasetMetadataQuery {
             }
         };
 
-        match json::decode::<BTreeMap<String, DatasetMetadata>>(&json_data[..]) {
+        match serde_json::from_str::<BTreeMap<String, DatasetMetadata>>(&json_data[..]) {
             Ok(tree) => {
                 if tree.len() == 1 {
                     Ok(tree.iter().next().unwrap().1.clone())
@@ -335,7 +337,7 @@ impl ApiCall<Vec<Code>> for CodeListQuery {
     }
 }
 
-impl<T: Decodable + Clone> ApiCall<Vec<T>> for DataQuery {
+impl<T: Deserialize + Clone> ApiCall<Vec<T>> for DataQuery {
     fn send(&self) -> Result<Vec<T>> {
         let csv_data = {
             let data = try!(ApiCall::<Vec<T>>::encoded_data(self));

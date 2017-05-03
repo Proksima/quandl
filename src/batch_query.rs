@@ -5,7 +5,7 @@ use std::sync::mpsc::{Receiver, TryRecvError, channel};
 use std::sync::{Arc, Mutex, RwLock};
 
 use has::Has;
-use rustc_serialize::Decodable;
+use serde::Deserialize;
 
 use Result;
 use api_call::ApiCall;
@@ -45,7 +45,7 @@ pub struct Iterator<T> {
 /// used for other tasks before, to not go over the Quandl's limit.
 ///
 pub fn batch_query<T, B, C>(queries: B, threads: usize) -> Iterator<Result<T>>
-    where T: Decodable + Clone + Send + 'static,
+    where T: Deserialize + Clone + Send + 'static,
           C: ApiCall<T> + Clone + Send + 'static,
           B: AsRef<[C]>,
 {
@@ -68,7 +68,7 @@ pub fn batch_query<T, B, C>(queries: B, threads: usize) -> Iterator<Result<T>>
 ///   for 10 minutes. After 720,000 API calls, the key is put on hold for 24 hours instead.
 ///
 pub fn batch_query_premium<T, B, C>(queries: B, threads: usize) -> Iterator<Result<T>>
-    where T: Decodable + Clone + Send + 'static,
+    where T: Deserialize + Clone + Send + 'static,
           C: ApiCall<T> + Clone + Send + 'static,
           B: AsRef<[C]>,
 {
@@ -84,7 +84,7 @@ pub fn batch_query_premium<T, B, C>(queries: B, threads: usize) -> Iterator<Resu
 pub fn batch_query_with_offset<T, B, C>(queries: B, threads: usize, calls_offset: usize)
     -> Iterator<Result<T>>
 
-    where T: Decodable + Clone + Send + 'static,
+    where T: Deserialize + Clone + Send + 'static,
           C: ApiCall<T> + Clone + Send + 'static,
           B: AsRef<[C]>,
 {
@@ -108,7 +108,7 @@ pub fn batch_query_with_offset<T, B, C>(queries: B, threads: usize, calls_offset
 pub fn batch_query_premium_with_offset<T, B, C>(queries: B, threads: usize, calls_offset: usize)
     -> Iterator<Result<T>>
 
-    where T: Decodable + Clone + Send + 'static,
+    where T: Deserialize + Clone + Send + 'static,
           C: ApiCall<T> + Clone + Send + 'static,
           B: AsRef<[C]>,
 {
@@ -130,7 +130,7 @@ fn batch_query_implementation<T, B, C>(queries: B,
 
     -> Iterator<Result<T>>
 
-    where T: Decodable + Clone + Send + 'static,
+    where T: Deserialize + Clone + Send + 'static,
           C: ApiCall<T> + Clone + Send + 'static,
           B: AsRef<[C]>,
 {
