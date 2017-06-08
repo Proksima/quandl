@@ -1,4 +1,5 @@
 use std::collections::BTreeMap;
+use std::io::Cursor;
 
 use csv;
 use serde::Deserialize;
@@ -155,7 +156,7 @@ impl DataAndMetadataQuery {
     }
 }
 
-impl ApiCall<DatabaseMetadata> for DatabaseMetadataQuery {
+impl<'de> ApiCall<'de, DatabaseMetadata> for DatabaseMetadataQuery {
     fn send(&self) -> Result<DatabaseMetadata> {
         let json_data = {
             let data = try!(ApiCall::<DatabaseMetadata>::encoded_data(self));
@@ -189,7 +190,7 @@ impl ApiCall<DatabaseMetadata> for DatabaseMetadataQuery {
     }
 }
 
-impl ApiCall<DatasetMetadata> for DatasetMetadataQuery {
+impl<'de> ApiCall<'de, DatasetMetadata> for DatasetMetadataQuery {
     fn send(&self) -> Result<DatasetMetadata> {
         let json_data = {
             let data = try!(ApiCall::<DatasetMetadata>::encoded_data(self));
@@ -223,7 +224,7 @@ impl ApiCall<DatasetMetadata> for DatasetMetadataQuery {
     }
 }
 
-impl ApiCall<DatabaseList> for DatabaseSearch {
+impl<'de> ApiCall<'de, DatabaseList> for DatabaseSearch {
     fn fmt_prefix(&self) -> Option<String> {
         Some(String::from("/databases.json"))
     }
@@ -244,7 +245,7 @@ impl ApiCall<DatabaseList> for DatabaseSearch {
     }
 }
 
-impl ApiCall<DatasetList> for DatasetSearch {
+impl<'de> ApiCall<'de, DatasetList> for DatasetSearch {
     fn fmt_prefix(&self) -> Option<String> {
         Some(String::from("/datasets.json"))
     }
@@ -267,7 +268,7 @@ impl ApiCall<DatasetList> for DatasetSearch {
     }
 }
 
-impl ApiCall<Vec<Code>> for CodeListQuery {
+impl<'de> ApiCall<'de, Vec<Code>> for CodeListQuery {
     fn send(&self) -> Result<Vec<Code>> {
         use csv;
         use zip::read::ZipArchive;
@@ -289,10 +290,10 @@ impl ApiCall<Vec<Code>> for CodeListQuery {
                     csv
                 };
 
-                let mut reader = csv::Reader::from_string(csv);
+                let mut reader = csv::Reader::from_reader(Cursor::new(csv));
                 let mut codes: Vec<Code> = vec![];
 
-                for record in reader.decode() {
+                for record in reader.deserialize() {
                     let record: (String, String) = {
                         match record {
                             Ok(record) => record,
@@ -337,7 +338,7 @@ impl ApiCall<Vec<Code>> for CodeListQuery {
     }
 }
 
-impl<T: Deserialize + Clone> ApiCall<Vec<T>> for DataQuery {
+impl<'de, T: Deserialize<'de> + Clone> ApiCall<'de, Vec<T>> for DataQuery {
     fn send(&self) -> Result<Vec<T>> {
         let csv_data = {
             let data = try!(ApiCall::<Vec<T>>::encoded_data(self));
@@ -348,15 +349,22 @@ impl<T: Deserialize + Clone> ApiCall<Vec<T>> for DataQuery {
             }
         };
 
-        let data = {
-            let mut reader = csv::Reader::from_string(csv_data).has_headers(false);
-            reader.decode().collect::<csv::Result<Vec<T>>>()
+        let data: Vec<T> = {
+            let mut reader = {
+                csv::ReaderBuilder::new()
+                    .has_headers(false)
+                    .from_reader(Cursor::new(csv_data))
+            };
+
+            let mut codes: Vec<Code> = vec![];
+
+            match reader.deserialize().next().unwrap() {
+                Ok(data) => data,
+                Err(e) => return Err(Error::ParsingFailed(e.to_string())),
+            }
         };
 
-        match data {
-            Ok(data) => Ok(data),
-            Err(e) => Err(Error::ParsingFailed(e.to_string())),
-        }
+        Ok(data)
     }
 
     fn fmt_prefix(&self) -> Option<String> {

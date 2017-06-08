@@ -13,7 +13,7 @@ pub static QUANDL_API_URL: &'static str = "https://www.quandl.com/api/v3";
 ///
 /// This trait is implemented by all queries.
 ///
-pub trait ApiCall<T: Deserialize + Clone>: Has<ApiArguments> {
+pub trait ApiCall<'de, T: Deserialize<'de> + Clone>: Has<ApiArguments> {
     /// Returns the URL that will be used to submit the query through Quandl's API.
     ///
     fn url(&self) -> String {
@@ -71,7 +71,7 @@ pub trait ApiCall<T: Deserialize + Clone>: Has<ApiArguments> {
     }
 }
 
-impl<'a, T: Deserialize + Clone, A: ApiCall<T>> ApiCall<T> for &'a A {
+impl<'a, 'de, T: Deserialize<'de> + Clone, A: ApiCall<'de, T>> ApiCall<'de, T> for &'a A {
     fn url(&self) -> String {
         ApiCall::<T>::url(*self)
     }
@@ -93,7 +93,7 @@ impl<'a, T: Deserialize + Clone, A: ApiCall<T>> ApiCall<T> for &'a A {
     }
 }
 
-impl<'a, T: Deserialize + Clone, A: ApiCall<T>> ApiCall<T> for &'a mut A {
+impl<'a, 'de, T: Deserialize<'de> + Clone, A: ApiCall<'de, T>> ApiCall<'de, T> for &'a mut A {
     fn url(&self) -> String {
         ApiCall::<T>::url(*self)
     }
