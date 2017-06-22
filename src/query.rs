@@ -2,7 +2,8 @@ use std::collections::BTreeMap;
 use std::io::Cursor;
 
 use csv;
-use serde::Deserialize;
+
+use serde::de::DeserializeOwned;
 use serde_json;
 
 use types::*;
@@ -156,14 +157,12 @@ impl DataAndMetadataQuery {
     }
 }
 
-impl<'de> ApiCall<'de, DatabaseMetadata> for DatabaseMetadataQuery {
+impl ApiCall<DatabaseMetadata> for DatabaseMetadataQuery {
     fn send(&self) -> Result<DatabaseMetadata> {
         let json_data = {
-            let data = try!(ApiCall::<DatabaseMetadata>::encoded_data(self));
-
-            match String::from_utf8(data) {
-                Ok(data) => data,
-                Err(e) => return Err(Error::ParsingFailed(e.to_string())),
+            match String::from_utf8(try!(ApiCall::<DatabaseMetadata>::encoded_data(self))) {
+                Ok(json) => json,
+                Err(e) => { return Err(Error::ParsingFailed(e.to_string())); }
             }
         };
 
@@ -190,14 +189,12 @@ impl<'de> ApiCall<'de, DatabaseMetadata> for DatabaseMetadataQuery {
     }
 }
 
-impl<'de> ApiCall<'de, DatasetMetadata> for DatasetMetadataQuery {
+impl ApiCall<DatasetMetadata> for DatasetMetadataQuery {
     fn send(&self) -> Result<DatasetMetadata> {
         let json_data = {
-            let data = try!(ApiCall::<DatasetMetadata>::encoded_data(self));
-
-            match String::from_utf8(data) {
-                Ok(data) => data,
-                Err(e) => return Err(Error::ParsingFailed(e.to_string())),
+            match String::from_utf8(try!(ApiCall::<DatasetMetadata>::encoded_data(self))) {
+                Ok(json) => json,
+                Err(e) => { return Err(Error::ParsingFailed(e.to_string())); }
             }
         };
 
@@ -224,7 +221,7 @@ impl<'de> ApiCall<'de, DatasetMetadata> for DatasetMetadataQuery {
     }
 }
 
-impl<'de> ApiCall<'de, DatabaseList> for DatabaseSearch {
+impl ApiCall<DatabaseList> for DatabaseSearch {
     fn fmt_prefix(&self) -> Option<String> {
         Some(String::from("/databases.json"))
     }
@@ -245,7 +242,7 @@ impl<'de> ApiCall<'de, DatabaseList> for DatabaseSearch {
     }
 }
 
-impl<'de> ApiCall<'de, DatasetList> for DatasetSearch {
+impl ApiCall<DatasetList> for DatasetSearch {
     fn fmt_prefix(&self) -> Option<String> {
         Some(String::from("/datasets.json"))
     }
@@ -268,7 +265,7 @@ impl<'de> ApiCall<'de, DatasetList> for DatasetSearch {
     }
 }
 
-impl<'de> ApiCall<'de, Vec<Code>> for CodeListQuery {
+impl ApiCall<Vec<Code>> for CodeListQuery {
     fn send(&self) -> Result<Vec<Code>> {
         use csv;
         use zip::read::ZipArchive;
@@ -338,16 +335,9 @@ impl<'de> ApiCall<'de, Vec<Code>> for CodeListQuery {
     }
 }
 
-impl<'de, T: Deserialize<'de> + Clone> ApiCall<'de, Vec<T>> for DataQuery {
+impl<T: DeserializeOwned + Clone> ApiCall<Vec<T>> for DataQuery {
     fn send(&self) -> Result<Vec<T>> {
-        let csv_data = {
-            let data = try!(ApiCall::<Vec<T>>::encoded_data(self));
-
-            match String::from_utf8(data) {
-                Ok(data) => data,
-                Err(e) => return Err(Error::ParsingFailed(e.to_string())),
-            }
-        };
+        let csv_data = try!(ApiCall::<Vec<T>>::encoded_data(self));
 
         let data: Vec<T> = {
             let mut reader = {
@@ -355,8 +345,6 @@ impl<'de, T: Deserialize<'de> + Clone> ApiCall<'de, Vec<T>> for DataQuery {
                     .has_headers(false)
                     .from_reader(Cursor::new(csv_data))
             };
-
-            let mut codes: Vec<Code> = vec![];
 
             match reader.deserialize().next().unwrap() {
                 Ok(data) => data,

@@ -5,7 +5,7 @@ use std::sync::mpsc::{Receiver, TryRecvError, channel};
 use std::sync::{Arc, Mutex, RwLock};
 
 use has::Has;
-use serde::Deserialize;
+use serde::de::DeserializeOwned;
 
 use Result;
 use api_call::ApiCall;
@@ -44,9 +44,9 @@ pub struct Iterator<T> {
 /// `batch_query_premium_with_offset` takes an additional argument in the event the keys have been
 /// used for other tasks before, to not go over the Quandl's limit.
 ///
-pub fn batch_query<'de, T, B, C>(queries: B, threads: usize) -> Iterator<Result<T>>
-    where T: Deserialize<'de> + Clone + Send + 'static,
-          C: ApiCall<'de, T> + Clone + Send + 'static,
+pub fn batch_query<T, B, C>(queries: B, threads: usize) -> Iterator<Result<T>>
+    where T: DeserializeOwned + Clone + Send + 'static,
+          C: ApiCall<T> + Clone + Send + 'static,
           B: AsRef<[C]>,
 {
     batch_query_with_offset(queries, threads, 0)
@@ -67,9 +67,9 @@ pub fn batch_query<'de, T, B, C>(queries: B, threads: usize) -> Iterator<Result<
 /// * After 5,000 API calls with a single API key, the routine will stop using that specific key
 ///   for 10 minutes. After 720,000 API calls, the key is put on hold for 24 hours instead.
 ///
-pub fn batch_query_premium<'de, T, B, C>(queries: B, threads: usize) -> Iterator<Result<T>>
-    where T: Deserialize<'de> + Clone + Send + 'static,
-          C: ApiCall<'de, T> + Clone + Send + 'static,
+pub fn batch_query_premium<T, B, C>(queries: B, threads: usize) -> Iterator<Result<T>>
+    where T: DeserializeOwned + Clone + Send + 'static,
+          C: ApiCall<T> + Clone + Send + 'static,
           B: AsRef<[C]>,
 {
     batch_query_premium_with_offset(queries, threads, 0)
@@ -81,11 +81,11 @@ pub fn batch_query_premium<'de, T, B, C>(queries: B, threads: usize) -> Iterator
 /// has already been made with every key. The purpose is simply to avoid going over the limit when
 /// batch processing (e.g. making 301 calls in less than 10 seconds).
 ///
-pub fn batch_query_with_offset<'de, T, B, C>(queries: B, threads: usize, calls_offset: usize)
+pub fn batch_query_with_offset<T, B, C>(queries: B, threads: usize, calls_offset: usize)
     -> Iterator<Result<T>>
 
-    where T: Deserialize<'de> + Clone + Send + 'static,
-          C: ApiCall<'de, T> + Clone + Send + 'static,
+    where T: DeserializeOwned + Clone + Send + 'static,
+          C: ApiCall<T> + Clone + Send + 'static,
           B: AsRef<[C]>,
 {
     lazy_static! {
@@ -105,13 +105,13 @@ pub fn batch_query_with_offset<'de, T, B, C>(queries: B, threads: usize, calls_o
 /// many calls has already been made with every key. The purpose is simply to avoid going over the
 /// limit when batch processing (e.g. making 5001 calls in less than 10 minutes).
 ///
-pub fn batch_query_premium_with_offset<'de, T, B, C>(queries: B,
-                                                     threads: usize,
-                                                     calls_offset: usize)
+pub fn batch_query_premium_with_offset<T, B, C>(queries: B,
+                                                threads: usize,
+                                                calls_offset: usize)
     -> Iterator<Result<T>>
 
-    where T: Deserialize<'de> + Clone + Send + 'static,
-          C: ApiCall<'de, T> + Clone + Send + 'static,
+    where T: DeserializeOwned + Clone + Send + 'static,
+          C: ApiCall<T> + Clone + Send + 'static,
           B: AsRef<[C]>,
 {
     lazy_static! {
@@ -124,7 +124,7 @@ pub fn batch_query_premium_with_offset<'de, T, B, C>(queries: B,
     batch_query_implementation(queries, threads, &*LIMITS, calls_offset, true)
 }
 
-fn batch_query_implementation<'de, T, B, C>(queries: B,
+fn batch_query_implementation<T, B, C>(queries: B,
                                        threads: usize,
                                        limits: &'static Vec<(usize, ::std::time::Duration)>,
                                        calls: usize,
@@ -132,8 +132,8 @@ fn batch_query_implementation<'de, T, B, C>(queries: B,
 
     -> Iterator<Result<T>>
 
-    where T: Deserialize<'de> + Clone + Send + 'static,
-          C: ApiCall<'de, T> + Clone + Send + 'static,
+    where T: DeserializeOwned + Clone + Send + 'static,
+          C: ApiCall<T> + Clone + Send + 'static,
           B: AsRef<[C]>,
 {
     let threads = ::std::cmp::max(1, threads);

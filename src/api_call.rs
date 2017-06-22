@@ -1,5 +1,6 @@
 use has::Has;
-use serde::Deserialize;
+
+use serde::de::DeserializeOwned;
 use serde_json;
 
 use {Result, Error};
@@ -13,7 +14,7 @@ pub static QUANDL_API_URL: &'static str = "https://www.quandl.com/api/v3";
 ///
 /// This trait is implemented by all queries.
 ///
-pub trait ApiCall<'de, T: Deserialize<'de> + Clone>: Has<ApiArguments> {
+pub trait ApiCall<T: DeserializeOwned + Clone>: Has<ApiArguments> {
     /// Returns the URL that will be used to submit the query through Quandl's API.
     ///
     fn url(&self) -> String {
@@ -42,15 +43,13 @@ pub trait ApiCall<'de, T: Deserialize<'de> + Clone>: Has<ApiArguments> {
     ///
     fn send(&self) -> Result<T> {
         let json_data = {
-            let data = try!(self.encoded_data());
-
-            match String::from_utf8(data) {
-                Ok(data) => data,
-                Err(e) => return Err(Error::ParsingFailed(e.to_string())),
+            match String::from_utf8(try!(self.encoded_data())) {
+                Ok(json) => json,
+                Err(e) => { return Err(Error::ParsingFailed(e.to_string())); }
             }
         };
 
-        match serde_json::from_str(&json_data[..]) {
+        match serde_json::from_str::<T>(&json_data[..]) {
             Ok(data) => Ok(data),
             Err(e) => Err(Error::ParsingFailed(e.to_string())),
         }
@@ -71,7 +70,7 @@ pub trait ApiCall<'de, T: Deserialize<'de> + Clone>: Has<ApiArguments> {
     }
 }
 
-impl<'a, 'de, T: Deserialize<'de> + Clone, A: ApiCall<'de, T>> ApiCall<'de, T> for &'a A {
+impl<'a, T: DeserializeOwned + Clone, A: ApiCall<T>> ApiCall<T> for &'a A {
     fn url(&self) -> String {
         ApiCall::<T>::url(*self)
     }
@@ -93,7 +92,7 @@ impl<'a, 'de, T: Deserialize<'de> + Clone, A: ApiCall<'de, T>> ApiCall<'de, T> f
     }
 }
 
-impl<'a, 'de, T: Deserialize<'de> + Clone, A: ApiCall<'de, T>> ApiCall<'de, T> for &'a mut A {
+impl<'a, T: DeserializeOwned + Clone, A: ApiCall<T>> ApiCall<T> for &'a mut A {
     fn url(&self) -> String {
         ApiCall::<T>::url(*self)
     }

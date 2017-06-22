@@ -1,5 +1,4 @@
 extern crate quandl_v3;
-extern crate rustc_serialize;
 
 use quandl_v3::Result;
 use quandl_v3::prelude::*;
