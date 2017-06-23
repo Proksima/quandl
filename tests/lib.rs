@@ -189,8 +189,13 @@ fn batch_querying() {
     println!("{}", query_4.url());
 
     let vector: Vec<_> = {
-        batch_query(&[query_1.clone(), query_2.clone(), query_3.clone(), query_4.clone()],
-                    1).collect()
+        let mut batch_query = BatchQuery::new();
+
+        batch_query
+            .queries(&[query_1.clone(), query_2.clone(), query_3.clone(), query_4.clone()])
+            .threads(1);
+
+        batch_query.run().collect()
     };
 
     println!("{:?}", vector);
@@ -202,10 +207,16 @@ fn batch_querying() {
     }
 
     for i in 2..4 {
-        assert_eq!(&vector,
-                   &batch_query(&[query_1.clone(),
-                                  query_2.clone(),
-                                  query_3.clone(),
-                                  query_4.clone()], i).collect::<Vec<_>>());
+        let other_vector: Vec<_> = {
+            let mut batch_query = BatchQuery::new();
+
+            batch_query
+                .queries(&[query_1.clone(), query_2.clone(), query_3.clone(), query_4.clone()])
+                .threads(i);
+
+            batch_query.run().collect()
+        };
+
+        assert_eq!(vector, other_vector);
     }
 }

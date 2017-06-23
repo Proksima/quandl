@@ -74,9 +74,9 @@ extern crate zip;
 extern crate csv;
 extern crate serde;
 extern crate reqwest;
+extern crate num_cpus;
 extern crate serde_json;
 #[macro_use] extern crate serde_derive;
-#[macro_use] extern crate lazy_static;
 #[macro_use] extern crate has;
 
 mod types;

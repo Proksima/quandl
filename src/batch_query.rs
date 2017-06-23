@@ -11,6 +11,157 @@ use Result;
 use api_call::ApiCall;
 use parameters::ApiArguments;
 
+pub struct BatchQuery<A, T>
+    where T: DeserializeOwned + Clone + Sync + Send + 'static,
+          A: ApiCall<T> + Clone + Sync + Send + 'static,
+{
+    offset: usize,
+    limits: Vec<(usize, ::std::time::Duration)>,
+    queries: Vec<A>,
+    threads: usize,
+    concurrent_calls: bool,
+    marker: ::std::marker::PhantomData<T>,
+}
+
+impl<A, T> BatchQuery<A, T>
+    where T: DeserializeOwned + Clone + Sync + Send + 'static,
+          A: ApiCall<T> + Clone + Sync + Send + 'static,
+{
+    pub fn new() -> Self {
+        BatchQuery {
+            offset: 0,
+            limits: vec![],
+            queries: vec![],
+            threads: ::num_cpus::get(),
+            concurrent_calls: false,
+            marker: ::std::marker::PhantomData,
+        }
+    }
+
+    pub fn offset(&mut self, offset: usize) -> &mut Self {
+        self.offset = offset;
+        self
+    }
+
+    pub fn limit(&mut self, limit: usize, timeout: u64) -> &mut Self {
+        self.limits.push((limit, ::std::time::Duration::new(timeout, 0)));
+        self
+    }
+
+    pub fn query(&mut self, query: A) -> &mut Self {
+        self.queries.push(query);
+        self
+    }
+
+    pub fn queries(&mut self, queries: &[A]) -> &mut Self {
+        self.queries.extend_from_slice(queries);
+        self
+    }
+
+    pub fn threads(&mut self, threads: usize) -> &mut Self {
+        assert!(threads > 0, "threads: {}", threads);
+        self.threads = threads;
+        self
+    }
+
+    pub fn concurrent_calls(&mut self) -> &mut Self {
+        self.concurrent_calls = true;
+        self
+    }
+
+    pub fn run(self) -> Iterator<Result<T>> {
+        let keys = Arc::new(RwLock::new(HashMap::<String, Mutex<usize>>::new()));
+
+        for query in self.queries.iter() {
+            if let Some(ref key) = Has::<ApiArguments>::get_ref(query).api_key {
+                if !keys.read().unwrap().contains_key(&key[..]) {
+                    keys.write().unwrap().insert(key.clone(), Mutex::new(self.offset));
+                }
+            }
+        }
+
+        let mut jobs: Vec<Vec<A>> = vec![];
+
+        for _ in 0..self.threads {
+            jobs.push(vec![]);
+        }
+
+        for (index, api_call) in self.queries.iter().enumerate() {
+            jobs[index % self.threads].push(api_call.clone());
+        }
+
+        let mut iterator = {
+            Iterator {
+                index: 0,
+                channels: vec![],
+            }
+        };
+
+        let batch_query = Arc::new(self);
+
+        for api_queries in jobs {
+            if !api_queries.is_empty() {
+                let keys = keys.clone();
+                let (tx, rx) = channel();
+
+                iterator.channels.push(rx);
+
+                let batch_query = batch_query.clone();
+
+                spawn(move || {
+                    for api_call in api_queries {
+                        if let Some(ref key) = Has::<ApiArguments>::get_ref(&api_call).api_key {
+                            if batch_query.concurrent_calls {
+                                {
+                                    let keys = keys.read().unwrap();
+
+                                    let mut calls = {
+                                        keys.get(&key[..]).expect("Key not found")
+                                            .lock().expect("Poisoned Mutex")
+                                    };
+
+                                    for &(limit, ref duration) in batch_query.limits.iter() {
+                                        if *calls != 0 && *calls % limit == 0 {
+                                            ::std::thread::sleep(duration.clone());
+                                        }
+                                    }
+
+                                    *calls += 1;
+                                }
+
+                                if let Err(_) = tx.send(api_call.send()) {
+                                    panic!("Thread's communication channel closed prematurely.");
+                                }
+                            } else {
+                                let keys = keys.read().unwrap();
+
+                                let mut calls = {
+                                    keys.get(&key[..]).expect("Key not found")
+                                        .lock().expect("Poisoned Mutex")
+                                };
+
+                                for &(limit, ref duration) in batch_query.limits.iter() {
+                                    if *calls != 0 && *calls % limit == 0 {
+                                        ::std::thread::sleep(duration.clone());
+                                    }
+                                }
+
+                                *calls += 1;
+
+                                if let Err(_) = tx.send(api_call.send()) {
+                                    panic!("Thread's communication channel closed prematurely.");
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+        }
+
+        iterator
+    }
+}
+
 /// Iterator returned by the `batch_query` function.
 ///
 /// See the `batch_query` function's documentation for more information.
@@ -20,6 +171,58 @@ pub struct Iterator<T> {
     channels: Vec<Receiver<T>>,
 }
 
+impl<T: Sync + Send + 'static> Iterator<T> {
+    /// Check if the next `Result` value is ready in a non blocking way.
+    ///
+    /// If the value is not yet avaiable, `Some(None)` is returned. If the iterator is over, `None`
+    /// is returned. Otherwise, `Some(Result)` is to be expected.
+    ///
+    /// Note that the implementation of the `Iterator` trait is done by calling this function in
+    /// the `next` implementation and yielding whether this function returns `Some(None)`.
+    ///
+    pub fn try_next(&mut self) -> Option<Option<T>> {
+        loop {
+            if self.channels.is_empty() {
+                return None;
+            } else {
+                match self.channels[self.index].try_recv() {
+                    Ok(item) => {
+                        self.index = (self.index + 1) % self.channels.len();
+                        return Some(Some(item));
+                    },
+
+                    Err(TryRecvError::Disconnected) => {
+                        self.channels.truncate(self.index);
+
+                        if self.channels.is_empty() {
+                            return None;
+                        } else {
+                            self.index = 0;
+                        }
+                    },
+
+                    Err(TryRecvError::Empty) => return Some(None),
+                }
+            }
+        }
+    }
+}
+
+impl<T: Sync + Send + 'static> ::std::iter::Iterator for Iterator<T> {
+    type Item = T;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        loop {
+            match self.try_next() {
+                Some(Some(item)) => return Some(item),
+                Some(None) => ::std::thread::yield_now(),
+                None => return None,
+            }
+        }
+    }
+}
+
+/*
 /// Submit multiple queries at the same time.
 ///
 /// A slice/vector of queries is given as argument together with the number of threads that should
@@ -123,154 +326,4 @@ pub fn batch_query_premium_with_offset<T, B, C>(queries: B,
 
     batch_query_implementation(queries, threads, &*LIMITS, calls_offset, true)
 }
-
-fn batch_query_implementation<T, B, C>(queries: B,
-                                       threads: usize,
-                                       limits: &'static Vec<(usize, ::std::time::Duration)>,
-                                       calls: usize,
-                                       concurrent_calls: bool)
-
-    -> Iterator<Result<T>>
-
-    where T: DeserializeOwned + Clone + Send + 'static,
-          C: ApiCall<T> + Clone + Send + 'static,
-          B: AsRef<[C]>,
-{
-    let threads = ::std::cmp::max(1, threads);
-    let keys = Arc::new(RwLock::new(HashMap::<String, Mutex<usize>>::new()));
-
-    for query in queries.as_ref().iter() {
-        if let Some(ref key) = Has::<ApiArguments>::get_ref(query).api_key {
-            if !keys.read().unwrap().contains_key(&key[..]) {
-                keys.write().unwrap().insert(key.clone(), Mutex::new(calls));
-            }
-        }
-    }
-
-    let mut jobs: Vec<Vec<C>> = vec![];
-
-    for _ in 0..threads {
-        jobs.push(vec![]);
-    }
-
-    for (index, api_call) in queries.as_ref().iter().enumerate() {
-        jobs[index % threads].push(api_call.clone());
-    }
-
-    let mut iterator = {
-        Iterator {
-            index: 0,
-            channels: vec![],
-        }
-    };
-
-    for api_queries in jobs {
-        if !api_queries.is_empty() {
-            let keys = keys.clone();
-            let (tx, rx) = channel();
-
-            iterator.channels.push(rx);
-
-            spawn(move || {
-                for api_call in api_queries {
-                    if let Some(ref key) = Has::<ApiArguments>::get_ref(&api_call).api_key {
-                        if concurrent_calls {
-                            {
-                                let keys = keys.read().unwrap();
-
-                                let mut calls = {
-                                    keys.get(&key[..]).expect("Key not found")
-                                        .lock().expect("Poisoned Mutex")
-                                };
-
-                                for &(limit, ref duration) in limits.iter() {
-                                    if *calls != 0 && *calls % limit == 0 {
-                                        ::std::thread::sleep(duration.clone());
-                                    }
-                                }
-
-                                *calls += 1;
-                            }
-
-                            if let Err(_) = tx.send(api_call.send()) {
-                                panic!("Inter-threads communication channel closed prematurely.");
-                            }
-                        } else {
-                            let keys = keys.read().unwrap();
-
-                            let mut calls = {
-                                keys.get(&key[..]).expect("Key not found")
-                                    .lock().expect("Poisoned Mutex")
-                            };
-
-                            for &(limit, ref duration) in limits.iter() {
-                                if *calls != 0 && *calls % limit == 0 {
-                                    ::std::thread::sleep(duration.clone());
-                                }
-                            }
-
-                            *calls += 1;
-
-                            if let Err(_) = tx.send(api_call.send()) {
-                                panic!("Inter-threads communication channel closed prematurely.");
-                            }
-                        }
-                    }
-                }
-            });
-        }
-    }
-
-    iterator
-}
-
-impl<T: Sync + Send + 'static> Iterator<T> {
-    /// Check if the next `Result` value is ready in a non blocking way.
-    ///
-    /// If the value is not yet avaiable, `Some(None)` is returned. If the iterator is over, `None`
-    /// is returned. Otherwise, `Some(Result)` is to be expected.
-    ///
-    /// Note that the implementation of the `Iterator` trait is done by calling this function in
-    /// the `next` implementation and yielding whether this function returns `Some(None)`.
-    ///
-    pub fn try_next(&mut self) -> Option<Option<T>> {
-        loop {
-            if self.channels.is_empty() {
-                return None;
-            } else {
-                match self.channels[self.index].try_recv() {
-                    Ok(item) => {
-                        self.index = (self.index + 1) % self.channels.len();
-                        return Some(Some(item));
-                    },
-
-                    Err(TryRecvError::Disconnected) => {
-                        self.channels.truncate(self.index);
-
-                        if self.channels.is_empty() {
-                            return None;
-                        } else {
-                            self.index = 0;
-                        }
-                    },
-
-                    Err(TryRecvError::Empty) => return Some(None),
-                }
-            }
-        }
-    }
-}
-
-impl<T: Sync + Send + 'static> ::std::iter::Iterator for Iterator<T> {
-    type Item = T;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        loop {
-            match self.try_next() {
-                Some(Some(item)) => return Some(item),
-                Some(None) => ::std::thread::yield_now(),
-                None => return None,
-            }
-        }
-    }
-}
+*/
