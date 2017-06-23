@@ -11,6 +11,15 @@ use Result;
 use api_call::ApiCall;
 use parameters::ApiArguments;
 
+/// Builder pattern run multiple queries in batch.
+///
+/// The data is downloaded from the Quandl servers asynchronously. It does so by returning an
+/// Iterator which return the `Result` from each individual query in the order they are fed to the
+/// `query` and `queries` methods.
+///
+/// When batch downloading, it is important to keep Quandl's API limits in mind. Please read the
+/// documentation for methods `limit` and `concurrent_calls` for more information.
+///
 pub struct BatchQuery<A, T>
     where T: DeserializeOwned + Clone + Sync + Send + 'static,
           A: ApiCall<T> + Clone + Sync + Send + 'static,
@@ -27,6 +36,8 @@ impl<A, T> BatchQuery<A, T>
     where T: DeserializeOwned + Clone + Sync + Send + 'static,
           A: ApiCall<T> + Clone + Sync + Send + 'static,
 {
+    /// Construct a new (empty) BatchQuery with default state.
+    ///
     pub fn new() -> Self {
         BatchQuery {
             offset: 0,
@@ -38,37 +49,105 @@ impl<A, T> BatchQuery<A, T>
         }
     }
 
+    /// Assume that every API keys has already been used the specified number of times.
+    ///
+    /// This is an hackish way to send a big batch query underway immediately even if some API keys
+    /// have been used a small number of times (e.g. for testing purposes). This is obviously
+    /// suboptimal and a future version of this library might provide stateful API keys which hold
+    /// information about their usage and can be saved/retrieved from disk to always be used as
+    /// efficiently as possible.
+    ///
     pub fn offset(&mut self, offset: usize) -> &mut Self {
         self.offset = offset;
         self
     }
 
+    /// Specify some download rate limits for this batch query.
+    ///
+    /// From the beginning of 2017, some heavy restrictions applies to non-premium API keys,
+    /// namely:
+    ///
+    /// * Up to 300 API calls can be made with a single key within 10 seconds.
+    /// * Up to 2,000 API calls can be made with a single key within 10 minutes (600 seconds).
+    /// * Up to 50,000 API calls can be made with a single key within a day (86,400 seconds).
+    ///
+    /// For premium keys the limits are as follow:
+    ///
+    /// * Up to 5,000 API calls can be made with a single key within 10 minutes (600 seconds).
+    /// * Up to 720,000 API calls can be made with a single key within a day (86,400 seconds).
+    ///
+    /// Not using an API key at all yield the most restrictive access:
+    ///
+    /// * Up to 20 API calls by 10 minutes (600 seconds).
+    /// * Up to 50 API calls within a day (86,400 seconds).
+    ///
+    /// This method allow to specify those limits in a future-proof fashion (the limits could
+    /// change at any time and this library does not handle it for this reason).
+    ///
+    /// For example, if not using any key, you would use this method as follow:
+    ///
+    /// ```rust
+    /// extern crate quandl_v3;
+    ///
+    /// use quandl_v3::Result;
+    /// use quandl_v3::prelude::*;
+    ///
+    /// fn main() {
+    ///     let mut batch_query = BatchQuery::new();
+    ///
+    ///     batch_query
+    ///         .query(DatabaseMetadataQuery::new("ICE"))
+    ///         .query(DatabaseMetadataQuery::new("WIKI"))
+    ///         .limit(20, 600)
+    ///         .limit(50, 86_400);
+    ///
+    ///     let result: Vec<_> = batch_query.run().collect();
+    /// }
+    /// ```
+    ///
     pub fn limit(&mut self, limit: usize, timeout: u64) -> &mut Self {
         self.limits.push((limit, ::std::time::Duration::new(timeout, 0)));
         self
     }
 
+    /// Add a single query to this batch.
+    ///
     pub fn query(&mut self, query: A) -> &mut Self {
         self.queries.push(query);
         self
     }
 
+    /// Add a slice of queries to this batch.
+    ///
     pub fn queries(&mut self, queries: &[A]) -> &mut Self {
         self.queries.extend_from_slice(queries);
         self
     }
 
+    /// Specify the maximum number of threads to use.
+    ///
+    /// By default the number of logical cores is used. The number of threads specified must be
+    /// bigger than 0.
+    ///
     pub fn threads(&mut self, threads: usize) -> &mut Self {
         assert!(threads > 0, "threads: {}", threads);
         self.threads = threads;
         self
     }
 
+    /// Whether to allow concurrent calls to the API with a single key.
+    ///
+    /// This usage of the Quandl API is forbidden for non-premium keys but allowed for premium
+    /// users. Thus this method should only be called on your batch if you are strictly using
+    /// premium keys.
+    ///
     pub fn concurrent_calls(&mut self) -> &mut Self {
         self.concurrent_calls = true;
         self
     }
 
+    /// Execute the batch query and return an iterator which asynchronously fetch the data.
+    ///
     pub fn run(self) -> Iterator<Result<T>> {
         let keys = Arc::new(RwLock::new(HashMap::<String, Mutex<usize>>::new()));
 
@@ -162,9 +241,9 @@ impl<A, T> BatchQuery<A, T>
     }
 }
 
-/// Iterator returned by the `batch_query` function.
+/// Iterator returned by the `BatchQuery::run` method.
 ///
-/// See the `batch_query` function's documentation for more information.
+/// See the `BatchQuery` struct documentation for more information.
 ///
 pub struct Iterator<T> {
     index: usize,
@@ -221,109 +300,3 @@ impl<T: Sync + Send + 'static> ::std::iter::Iterator for Iterator<T> {
         }
     }
 }
-
-/*
-/// Submit multiple queries at the same time.
-///
-/// A slice/vector of queries is given as argument together with the number of threads that should
-/// be used. The number of threads will be truncated to the range `[1, queries.as_ref().len()]`.
-///
-/// This function download the data from the Quandl servers asynchronously. It does so by returning
-/// an Iterator which return the `Result` from each individual query in the order they appear in
-/// the `queries` argument.
-///
-/// This function has been updated on the '2017-01-08' to handle the limits imposed by Quandl on
-/// their API. More specifically:
-///
-/// * After 300 API calls with a single API key, the routine will stop using that specific key for
-///   10 seconds. After 2,000 API calls, the key is put on hold for an additional 10 minutes.
-///   Finally, after 50,000 API calls, the waiting time increase to 24 hours.
-///
-/// * The routine do not make simultaneous calls using a single API key anymore as it is forbidden.
-///   Different keys are still used concurrently however.
-///
-/// You might want to look into the `batch_query_premium` function which use the premium limits
-/// instead and allow concurrency on a single key. Also, the `batch_query_with_offset` and
-/// `batch_query_premium_with_offset` takes an additional argument in the event the keys have been
-/// used for other tasks before, to not go over the Quandl's limit.
-///
-pub fn batch_query<T, B, C>(queries: B, threads: usize) -> Iterator<Result<T>>
-    where T: DeserializeOwned + Clone + Send + 'static,
-          C: ApiCall<T> + Clone + Send + 'static,
-          B: AsRef<[C]>,
-{
-    batch_query_with_offset(queries, threads, 0)
-}
-
-/// Submit multiple queries at the same time, using premium API keys.
-///
-/// A slice/vector of queries is given as argument together with the number of threads that should
-/// be used. The number of threads will be truncated to the range `[1, queries.as_ref().len()]`.
-///
-/// This function download the data from the Quandl servers asynchronously. It does so by returning
-/// an Iterator which return the `Result` from each individual query in the order they appear in
-/// the `queries` argument.
-///
-/// This function has been updated on the '2017-01-08' to handle the limits imposed by Quandl on
-/// their API. More specifically:
-///
-/// * After 5,000 API calls with a single API key, the routine will stop using that specific key
-///   for 10 minutes. After 720,000 API calls, the key is put on hold for 24 hours instead.
-///
-pub fn batch_query_premium<T, B, C>(queries: B, threads: usize) -> Iterator<Result<T>>
-    where T: DeserializeOwned + Clone + Send + 'static,
-          C: ApiCall<T> + Clone + Send + 'static,
-          B: AsRef<[C]>,
-{
-    batch_query_premium_with_offset(queries, threads, 0)
-}
-
-/// Submit multiple queries at the same time.
-///
-/// Identical to the `batch_query` function, but takes an extra argument specifying how many calls
-/// has already been made with every key. The purpose is simply to avoid going over the limit when
-/// batch processing (e.g. making 301 calls in less than 10 seconds).
-///
-pub fn batch_query_with_offset<T, B, C>(queries: B, threads: usize, calls_offset: usize)
-    -> Iterator<Result<T>>
-
-    where T: DeserializeOwned + Clone + Send + 'static,
-          C: ApiCall<T> + Clone + Send + 'static,
-          B: AsRef<[C]>,
-{
-    lazy_static! {
-        static ref LIMITS: Vec<(usize, ::std::time::Duration)> = vec![
-            (300, ::std::time::Duration::new(10, 0)),
-            (2_000, ::std::time::Duration::new(600, 0)),
-            (50_000, ::std::time::Duration::new(86_400, 0)),
-        ];
-    }
-
-    batch_query_implementation(queries, threads, &*LIMITS, calls_offset, false)
-}
-
-/// Submit multiple queries at the same time, using premium API keys.
-///
-/// Identical to the `batch_query_premium` function, but takes an extra argument specifying how
-/// many calls has already been made with every key. The purpose is simply to avoid going over the
-/// limit when batch processing (e.g. making 5001 calls in less than 10 minutes).
-///
-pub fn batch_query_premium_with_offset<T, B, C>(queries: B,
-                                                threads: usize,
-                                                calls_offset: usize)
-    -> Iterator<Result<T>>
-
-    where T: DeserializeOwned + Clone + Send + 'static,
-          C: ApiCall<T> + Clone + Send + 'static,
-          B: AsRef<[C]>,
-{
-    lazy_static! {
-        static ref LIMITS: Vec<(usize, ::std::time::Duration)> = vec![
-            (5_000, ::std::time::Duration::new(600, 0)),
-            (720_000, ::std::time::Duration::new(86_400, 0)),
-        ];
-    }
-
-    batch_query_implementation(queries, threads, &*LIMITS, calls_offset, true)
-}
-*/

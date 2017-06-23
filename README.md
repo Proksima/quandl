@@ -9,31 +9,41 @@ Quandl's RESTful API.
 [![Documentation](https://img.shields.io/badge/docs-latest-C9893D.svg)](http://proksima.github.io/quandl-v3-doc/quandl-v3/index.html)
 
 This crate uses the `rustc_serialize` crate extensively and thus suffers from some of its
-limitation. Namely,
+limitation. Namely:
 
 * When querying for the metadata of a dataset, the field `type` will be missing. This is due to
-  `type` being a keyword in Rust. Use of this crate assumes knowledge of the layout of the
-  queried data, so that field was not very important fortunately.
+  `type` being a keyword in Rust. Use of this crate assumes knowledge of the layout of the queried
+  data, so that field was not very important fortunately.
 
-* Most public enum's variants have non camel case names to match the naming convention of the
-  API. The deserializer need the names to match to work properly, thus you will see
-  `Order::asc` instead of the more readable `Order::Ascending`.
+* Most public enum's variants have non camel case names to match the naming convention of the API.
+  The deserializer need the names to match to work properly, thus you will see `Order::asc` instead
+  of the more readable `Order::Ascending`.
 
-Some other design choices of this crate includes
+Some other design choices of this crate includes:
 
-* No runtime checking of the query created. This crate makes it as hard as statically possible
-  to create an invalid query. However, the query will be checked by the Quandl API directly. On
-  the bright side, we forward Quandl's error messages/codes without pruning any information;
-  and their error-reporting is very good.
+* No runtime checking of the query created. This crate makes it as hard as statically possible to
+  create an invalid query. However, the query will be checked by the Quandl API directly. On the
+  bright side, we forward Quandl's error messages/codes without pruning any information; and their
+  error-reporting is very good.
 
 * The inclusion of a `batch_query` function that allows users to submit a bunch of query at the
-  same time. The function returns an iterator which gives the benefit of multithreading
-  downloads and asynchronicity which are indispensable when doing data mining.
+  same time. The function returns an iterator which gives the benefit of multithreading downloads
+  and asynchronicity which are indispensable when doing data mining.
 
-* We use the JSON Quandl API for everything but data queries as it often returns more
-  information. When it comes to the data queries we use the CSV subset of the API as it is
-  faster and allows to use the `rust-csv` crates which allow you to define your own structs to
-  receive the data.
+* We use the JSON Quandl API for everything but data queries as it often returns more information.
+  When it comes to the data queries we use the CSV subset of the API as it is faster and allows to
+  use the `rust-csv` crates which allow you to define your own structs to receive the data.
+
+### Wish list / TODO
+
+* Adding support for stateful API keys which remember their usage count, have their own individual
+  limits and can be persisted/recovered from disk between usage.
+
+* Split the keys from the queries so batch queries can automatically manage the pool of keys in the
+  most efficient way possible.
+
+* Refactor BatchQuery::run (I know it works for using it for so long before publishing this long
+  overdue update, but it is not my proudest piece of code).
 
 ### Simple example
 
