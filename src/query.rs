@@ -346,10 +346,16 @@ impl<T: DeserializeOwned + Clone> ApiCall<Vec<T>> for DataQuery {
                     .from_reader(Cursor::new(csv_data))
             };
 
-            match reader.deserialize().next().unwrap() {
-                Ok(data) => data,
-                Err(e) => return Err(Error::ParsingFailed(e.to_string())),
+            let mut vec: Vec<T> = Vec::new();
+
+            for r in reader.deserialize() {
+                match r {
+                    Ok(data) => vec.push(data),
+                    Err(e) => return Err(Error::ParsingFailed(e.to_string())),
+                }
             }
+
+            vec
         };
 
         Ok(data)

@@ -145,6 +145,28 @@ fn data_query() {
 }
 
 #[test]
+fn data_query_len() {
+    let query = {
+        let mut query = DataQuery::new("WIKI", "AAPL");
+
+        query.order(Order::asc)
+             .end_date(2016,2,5)
+             .start_date(2016,2,1)
+             .column_index(4);
+
+        if let Some(key) = API_KEY {
+            query.api_key(key);
+        }
+
+        query
+    };
+
+    let response: Vec<(String, f64)> = query.send().unwrap();
+
+    assert!(response.len() == 5);
+}
+
+#[test]
 fn batch_querying() {
     let query_1 = {
         let mut query = DatabaseMetadataQuery::new("WIKI");
