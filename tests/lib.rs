@@ -157,7 +157,7 @@ fn batch_querying() {
     };
 
     let query_2 = {
-        let mut query = DatabaseMetadataQuery::new("ICE");
+        let mut query = DatabaseMetadataQuery::new("FRED");
 
         if let Some(key) = API_KEY {
             query.api_key(key);

@@ -3,11 +3,11 @@ use std::io::Read;
 use reqwest;
 use serde_json;
 
-use {Result, Error};
+use crate::{Result, Error};
 
 pub fn download<S: AsRef<str>>(url: S) -> Result<Vec<u8>> {
     let (body, is_success) = {
-        match reqwest::get(url.as_ref()) {
+        match reqwest::blocking::get(url.as_ref()) {
             Ok(mut response) => {
                 let mut body: Vec<u8> = vec![];
 
