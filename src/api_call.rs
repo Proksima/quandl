@@ -3,12 +3,12 @@ use has::Has;
 use serde::de::DeserializeOwned;
 use serde_json;
 
-use {Result, Error};
-use parameters::ApiArguments;
+use crate::{Result, Error};
+use crate::parameters::ApiArguments;
 
 /// Quandl API URL used as the base URL for all queries.
 ///
-pub static QUANDL_API_URL: &'static str = "https://www.quandl.com/api/v3";
+pub const QUANDL_API_URL: &str = "https://www.quandl.com/api/v3";
 
 /// Trait allowing implementers to submit a request through the Quandl API.
 ///
@@ -35,7 +35,7 @@ pub trait ApiCall<T: DeserializeOwned + Clone>: Has<ApiArguments> {
     /// Bypass the parsers and retrieve the byte stream received from Quandl directly.
     ///
     fn encoded_data(&self) -> Result<Vec<u8>> {
-        ::download::download(self.url())
+        crate::download::download(self.url())
     }
 
     /// Submit a request to the Quandl's API and return a parsed object representing the data
@@ -43,7 +43,7 @@ pub trait ApiCall<T: DeserializeOwned + Clone>: Has<ApiArguments> {
     ///
     fn send(&self) -> Result<T> {
         let json_data = {
-            match String::from_utf8(try!(self.encoded_data())) {
+            match String::from_utf8(self.encoded_data()?) {
                 Ok(json) => json,
                 Err(e) => { return Err(Error::ParsingFailed(e.to_string())); }
             }

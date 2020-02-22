@@ -8,8 +8,8 @@ use has::Has;
 use serde::de::DeserializeOwned;
 
 use Result;
-use api_call::ApiCall;
-use parameters::ApiArguments;
+use crate::api_call::ApiCall;
+use crate::parameters::ApiArguments;
 
 /// Builder pattern run multiple queries in batch.
 ///
@@ -148,7 +148,7 @@ impl<A, T> BatchQuery<A, T>
 
     /// Execute the batch query and return an iterator which asynchronously fetch the data.
     ///
-    pub fn run(self) -> Iterator<Result<T>> {
+    pub fn run(self) -> Iterator<Result<T, crate::Error>> {
         let keys = Arc::new(RwLock::new(HashMap::<String, Mutex<usize>>::new()));
 
         for query in self.queries.iter() {

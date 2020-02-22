@@ -1,16 +1,13 @@
 use std::collections::BTreeMap;
-use std::io::Cursor;
-
-use csv;
 
 use serde::de::DeserializeOwned;
 use serde_json;
 
-use types::*;
-use parameters::*;
-use api_call::ApiCall;
+use crate::types::*;
+use crate::parameters::*;
+use crate::api_call::ApiCall;
 
-use {Result, Error};
+use crate::{Result, Error};
 
 /// Database metadata query.
 ///
@@ -160,7 +157,7 @@ impl DataAndMetadataQuery {
 impl ApiCall<DatabaseMetadata> for DatabaseMetadataQuery {
     fn send(&self) -> Result<DatabaseMetadata> {
         let json_data = {
-            match String::from_utf8(try!(ApiCall::<DatabaseMetadata>::encoded_data(self))) {
+            match String::from_utf8(ApiCall::<DatabaseMetadata>::encoded_data(self)?) {
                 Ok(json) => json,
                 Err(e) => { return Err(Error::ParsingFailed(e.to_string())); }
             }
@@ -192,7 +189,7 @@ impl ApiCall<DatabaseMetadata> for DatabaseMetadataQuery {
 impl ApiCall<DatasetMetadata> for DatasetMetadataQuery {
     fn send(&self) -> Result<DatasetMetadata> {
         let json_data = {
-            match String::from_utf8(try!(ApiCall::<DatasetMetadata>::encoded_data(self))) {
+            match String::from_utf8(ApiCall::<DatasetMetadata>::encoded_data(self)?) {
                 Ok(json) => json,
                 Err(e) => { return Err(Error::ParsingFailed(e.to_string())); }
             }
@@ -267,11 +264,10 @@ impl ApiCall<DatasetList> for DatasetSearch {
 
 impl ApiCall<Vec<Code>> for CodeListQuery {
     fn send(&self) -> Result<Vec<Code>> {
-        use csv;
         use zip::read::ZipArchive;
         use std::io::{Cursor, Read};
 
-        let zipped_data = try!(self.encoded_data());
+        let zipped_data = self.encoded_data()?;
 
         match ZipArchive::new(Cursor::new(zipped_data)) {
             Ok(mut files) => {
@@ -337,13 +333,13 @@ impl ApiCall<Vec<Code>> for CodeListQuery {
 
 impl<T: DeserializeOwned + Clone> ApiCall<Vec<T>> for DataQuery {
     fn send(&self) -> Result<Vec<T>> {
-        let csv_data = try!(ApiCall::<Vec<T>>::encoded_data(self));
+        let csv_data = ApiCall::<Vec<T>>::encoded_data(self)?;
 
         let data: Vec<T> = {
             let mut reader = {
                 csv::ReaderBuilder::new()
                     .has_headers(false)
-                    .from_reader(Cursor::new(csv_data))
+                    .from_reader(std::io::Cursor::new(csv_data))
             };
 
             match reader.deserialize().next().unwrap() {
